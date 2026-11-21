@@ -304,8 +304,9 @@ class DeviceCardWidget(QFrame):
     def __init__(self, title: str, subtitle: str, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setProperty("class", "card")
-        self.setMinimumSize(430, 268)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.setMinimumWidth(430)
+        self.setFixedHeight(268)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 16, 18, 16)
@@ -603,8 +604,8 @@ class HubDashboardWindow(QMainWindow):
         self.setWindowIcon(build_app_icon())
         # Apply Windows 11 PropertyStore + Class icon BEFORE first show
         apply_windows_taskbar_icon(int(self.winId()), self._ico_path)
-        self.resize(1000, 640)
-        self.setMinimumSize(940, 600)
+        self.resize(1000, 700)
+        self.setMinimumSize(940, 685)
 
         self._apply_stylesheet()
         self._build_ui()
@@ -777,6 +778,7 @@ class HubDashboardWindow(QMainWindow):
         # Combined History Chart Card
         chart_card = QFrame()
         chart_card.setProperty("class", "card")
+        chart_card.setMinimumHeight(250)
         chart_layout = QVBoxLayout(chart_card)
         chart_layout.setContentsMargins(16, 12, 16, 12)
         chart_layout.setSpacing(10)
