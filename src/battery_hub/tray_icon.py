@@ -80,11 +80,11 @@ def _draw_vertical_battery_bar(
     painter.setBrush(cap_color)
     painter.drawRoundedRect(cap_rect, cap_h / 2.0, cap_h / 2.0)
 
-    # Track background
+    # Track background (neutral charcoal)
     radius = max(1.5, body_rect.width() * 0.24)
     track_path = QPainterPath()
     track_path.addRoundedRect(body_rect, radius, radius)
-    painter.fillPath(track_path, QColor("#162631"))
+    painter.fillPath(track_path, QColor("#242424"))
 
     # Fill level from bottom to top
     if state.status == DeviceStatus.CHARGING and state.percent is None:
@@ -118,11 +118,11 @@ def _draw_vertical_battery_bar(
 
     # Crisp outline around each vertical bar
     border_w = max(0.9, size * 0.038)
-    outline_color = QColor("#334B5C") if is_disconnected else QColor(color)
+    outline_color = QColor("#4A4A4A") if is_disconnected else QColor(color)
     if not is_disconnected and state.status not in (DeviceStatus.CHARGING,) and (
         state.percent is None or state.percent > 30
     ):
-        outline_color = QColor("#3B5B6E")
+        outline_color = QColor("#5A5A5A")
     painter.setPen(QPen(outline_color, border_w))
     painter.setBrush(Qt.BrushStyle.NoBrush)
     painter.drawRoundedRect(body_rect, radius, radius)
@@ -139,15 +139,15 @@ def render_combined_pixmap(
     painter = QPainter(pm)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
 
-    # Dark rounded square badge backdrop so bars stay crisp on any taskbar theme
+    # Neutral dark-grey rounded square backdrop
     margin = max(0.8, size * 0.03)
     bg_rect = QRectF(margin, margin, size - 2 * margin, size - 2 * margin)
     bg_radius = size * 0.20
     bg_path = QPainterPath()
     bg_path.addRoundedRect(bg_rect, bg_radius, bg_radius)
-    painter.fillPath(bg_path, QColor("#0B141C"))
+    painter.fillPath(bg_path, QColor("#141414"))
 
-    border_pen = QPen(QColor("#223846"), max(0.8, size * 0.035))
+    border_pen = QPen(QColor("#383838"), max(0.8, size * 0.035))
     painter.setPen(border_pen)
     painter.setBrush(Qt.BrushStyle.NoBrush)
     painter.drawRoundedRect(bg_rect.adjusted(0.5, 0.5, -0.5, -0.5), bg_radius, bg_radius)

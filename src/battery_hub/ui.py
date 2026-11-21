@@ -248,7 +248,7 @@ class BatteryGaugeWidget(QWidget):
             side - 2 * pad,
         )
 
-        track_pen = QPen(QColor("#1A2D38"), ring_w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        track_pen = QPen(QColor("#2A2A2A"), ring_w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
         painter.setPen(track_pen)
         painter.drawArc(rect, 0, 360 * 16)
 
@@ -279,7 +279,7 @@ class BatteryGaugeWidget(QWidget):
             pct_text = "—"
 
         painter.setFont(QFont("Segoe UI", 28, QFont.Weight.Bold))
-        painter.setPen(QColor("#F5F8FA"))
+        painter.setPen(QColor("#F5F5F5"))
         painter.drawText(
             QRectF(rect.left(), rect.top() + rect.height() * 0.24, rect.width(), rect.height() * 0.36),
             Qt.AlignmentFlag.AlignCenter,
@@ -288,7 +288,7 @@ class BatteryGaugeWidget(QWidget):
 
         painter.setFont(QFont("Segoe UI", 9, QFont.Weight.DemiBold))
         active = self._status in (DeviceStatus.CONNECTED, DeviceStatus.CHARGING)
-        painter.setPen(accent if active else QColor("#8696A3"))
+        painter.setPen(accent if active else QColor("#9A9A9A"))
         painter.drawText(
             QRectF(rect.left() + 10, rect.top() + rect.height() * 0.59, rect.width() - 20, 22),
             Qt.AlignmentFlag.AlignCenter,
@@ -326,8 +326,8 @@ class DeviceCardWidget(QFrame):
 
         self.status_pill = QLabel("…")
         self.status_pill.setStyleSheet(
-            "background-color: #13242E; border: 1px solid #23404F; "
-            "border-radius: 11px; padding: 4px 10px; font-size: 11px; font-weight: 600; color: #C5D0D8;"
+            "background-color: #202020; border: 1px solid #3A3A3A; "
+            "border-radius: 11px; padding: 4px 10px; font-size: 11px; font-weight: 600; color: #CCCCCC;"
         )
         head.addWidget(self.status_pill, alignment=Qt.AlignmentFlag.AlignTop)
         layout.addLayout(head)
@@ -366,7 +366,7 @@ class DeviceCardWidget(QFrame):
     def set_pill(self, text: str, color_hex: str) -> None:
         self.status_pill.setText(text)
         self.status_pill.setStyleSheet(
-            f"background-color: #11202A; border: 1px solid {color_hex}; "
+            f"background-color: #1F1F1F; border: 1px solid {color_hex}; "
             f"border-radius: 11px; padding: 4px 10px; font-size: 11px; font-weight: 600; color: {color_hex};"
         )
 
@@ -444,7 +444,7 @@ class DualBatteryChartWidget(QWidget):
             painter.drawPath(line_path)
 
         last_pt = coords[-1]
-        painter.setPen(QPen(QColor("#081017"), 2.0))
+        painter.setPen(QPen(QColor("#141414"), 2.0))
         painter.setBrush(color)
         painter.drawEllipse(last_pt, 4.2, 4.2)
 
@@ -456,8 +456,8 @@ class DualBatteryChartWidget(QWidget):
         w = float(self.width())
         h = float(self.height())
         outer = QRectF(0.5, 0.5, w - 1.0, h - 1.0)
-        painter.setBrush(QColor("#0A141B"))
-        painter.setPen(QPen(QColor("#1E3440"), 1.0))
+        painter.setBrush(QColor("#141414"))
+        painter.setPen(QPen(QColor("#2E2E2E"), 1.0))
         painter.drawRoundedRect(outer, 10.0, 10.0)
 
         left = 42.0
@@ -466,14 +466,14 @@ class DualBatteryChartWidget(QWidget):
         bottom = 26.0
         plot = QRectF(left, top, max(10.0, w - left - right), max(10.0, h - top - bottom))
 
-        grid_pen = QPen(QColor("#1B2D37"), 1.0, Qt.PenStyle.DashLine)
+        grid_pen = QPen(QColor("#262626"), 1.0, Qt.PenStyle.DashLine)
         axis_font = QFont("Segoe UI", 8)
         painter.setFont(axis_font)
         for pct in (0, 25, 50, 75, 100):
             y = plot.bottom() - (pct / 100.0) * plot.height()
             painter.setPen(grid_pen)
             painter.drawLine(QPointF(plot.left(), y), QPointF(plot.right(), y))
-            painter.setPen(QColor("#7E92A0"))
+            painter.setPen(QColor("#8E8E8E"))
             painter.drawText(
                 QRectF(4.0, y - 8.0, left - 10.0, 16.0),
                 Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
@@ -485,7 +485,7 @@ class DualBatteryChartWidget(QWidget):
         active_points = (self._kb_points if show_kb else []) + (self._mouse_points if show_mouse else [])
 
         if not active_points:
-            painter.setPen(QColor("#7E92A0"))
+            painter.setPen(QColor("#8E8E8E"))
             painter.setFont(QFont("Segoe UI", 10))
             painter.drawText(plot, Qt.AlignmentFlag.AlignCenter, self._empty_text)
             painter.end()
@@ -510,7 +510,7 @@ class DualBatteryChartWidget(QWidget):
         if show_mouse:
             self._draw_series(painter, plot, self._mouse_points, t_min, span, COLOR_MOUSE, 44)
 
-        painter.setPen(QColor("#7E92A0"))
+        painter.setPen(QColor("#8E8E8E"))
         painter.setFont(axis_font)
         use_date = span > 36 * 3600
         fmt = "%d.%m." if use_date else "%H:%M"
@@ -636,81 +636,86 @@ class HubDashboardWindow(QMainWindow):
         self.setStyleSheet(
             """
             QMainWindow, QWidget#root {
-                background-color: #081017;
-                color: #F5F8FA;
+                background-color: #111111;
+                color: #F5F5F5;
                 font-family: "Segoe UI", sans-serif;
             }
             QFrame.card {
-                background-color: #0D1821;
-                border: 1px solid #1E3945;
+                background-color: #1A1A1A;
+                border: 1px solid #2E2E2E;
                 border-radius: 14px;
             }
             QLabel.title {
                 font-size: 20px;
                 font-weight: 700;
-                color: #F5F8FA;
+                color: #F5F5F5;
             }
             QLabel.muted {
-                color: #8696A3;
+                color: #9A9A9A;
                 font-size: 12px;
             }
             QLabel.stat_label {
-                color: #8696A3;
+                color: #8E8E8E;
                 font-size: 10px;
                 font-weight: 600;
                 text-transform: uppercase;
             }
             QLabel.stat_value {
-                color: #F5F8FA;
+                color: #F5F5F5;
                 font-size: 13px;
                 font-weight: 700;
             }
             QPushButton {
-                background-color: #142631;
-                color: #F5F8FA;
-                border: 1px solid #244554;
+                background-color: #242424;
+                color: #F5F5F5;
+                border: 1px solid #3A3A3A;
                 border-radius: 8px;
                 padding: 7px 14px;
                 font-size: 12px;
                 font-weight: 600;
             }
             QPushButton:hover {
-                background-color: #1B3441;
-                border-color: #2E5B6E;
+                background-color: #303030;
+                border-color: #525252;
             }
             QPushButton:disabled {
-                color: #5C7280;
-                background-color: #0E1B24;
+                color: #666666;
+                background-color: #1C1C1C;
             }
             QPushButton.pill_btn {
                 padding: 4px 10px;
                 border-radius: 6px;
                 font-size: 11px;
-                background-color: #0F1D27;
-                border: 1px solid #1D3440;
-                color: #9BB0BD;
+                background-color: #202020;
+                border: 1px solid #333333;
+                color: #A8A8A8;
+            }
+            QPushButton.pill_btn:hover {
+                background-color: #2B2B2B;
+                border-color: #4A4A4A;
+                color: #E5E5E5;
             }
             QPushButton.pill_btn[active="true"] {
-                background-color: #173D32;
-                border-color: #22C97A;
-                color: #E8FFF4;
+                background-color: #383838;
+                border-color: #CCCCCC;
+                color: #FFFFFF;
             }
             QComboBox {
-                background-color: #142631;
-                color: #F5F8FA;
-                border: 1px solid #244554;
+                background-color: #242424;
+                color: #F5F5F5;
+                border: 1px solid #3A3A3A;
                 border-radius: 7px;
                 padding: 4px 10px;
                 font-size: 12px;
             }
             QComboBox QAbstractItemView {
-                background-color: #0D1821;
-                color: #F5F8FA;
-                selection-background-color: #1B3441;
-                border: 1px solid #1E3945;
+                background-color: #1A1A1A;
+                color: #F5F5F5;
+                selection-background-color: #333333;
+                border: 1px solid #3A3A3A;
             }
             QCheckBox {
-                color: #C5D0D8;
+                color: #D4D4D4;
                 font-size: 12px;
                 spacing: 7px;
             }
@@ -718,12 +723,12 @@ class HubDashboardWindow(QMainWindow):
                 width: 15px;
                 height: 15px;
                 border-radius: 4px;
-                border: 1px solid #2D4E5E;
-                background-color: #0D1821;
+                border: 1px solid #4F4F4F;
+                background-color: #1A1A1A;
             }
             QCheckBox::indicator:checked {
-                background-color: #22C97A;
-                border-color: #22C97A;
+                background-color: #E0E0E0;
+                border-color: #FFFFFF;
             }
             """
         )
@@ -799,7 +804,7 @@ class HubDashboardWindow(QMainWindow):
             self._filter_buttons.append((btn, key))
 
         sep = QLabel("|")
-        sep.setStyleSheet("color: #28414F; margin: 0 4px;")
+        sep.setStyleSheet("color: #3A3A3A; margin: 0 4px;")
         chart_header.addWidget(sep)
 
         self._range_buttons: list[tuple[QPushButton, str, Optional[float]]] = []
