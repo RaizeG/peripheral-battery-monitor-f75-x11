@@ -36,7 +36,7 @@ CMD_BATTERY = 0x4A
 PACKET_LEN = 20
 
 POWER_DISCHARGING = 0x01
-POWER_CHARGING = 0x02
+POWER_CHARGING_STATES = (0x02, 0x10)
 
 
 def _get_hid() -> Any:
@@ -87,7 +87,7 @@ def parse_battery_response(
             timestamp=ts,
         )
 
-    if power_raw == POWER_CHARGING:
+    if power_raw in POWER_CHARGING_STATES:
         charging: Optional[bool] = True
         status = DeviceStatus.CHARGING
         conn = "2,4 GHz + USB (lädt)"

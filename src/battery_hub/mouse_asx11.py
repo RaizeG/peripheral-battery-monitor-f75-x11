@@ -53,13 +53,15 @@ def enumerate_mouse_mode(hid_module: Any = None) -> tuple[Optional[str], list[An
     hid_mod = hid_module or get_hid_module()
     if hid_mod is None:
         raise RuntimeError("hidapi ist nicht installiert")
+    # Check wired USB mode first: the 2.4 GHz dongle usually stays plugged in
+    # at the same time while the mouse is charging via USB cable.
+    if hid_mod.enumerate(VID_ASX11, PID_WIRED):
+        return "charging", []
     paths = list(dict.fromkeys(
         dev["path"] for dev in hid_mod.enumerate(VID_ASX11, PID_ADAPTER) if dev.get("path")
     ))
     if paths:
         return "adapter", paths
-    if hid_mod.enumerate(VID_ASX11, PID_WIRED):
-        return "charging", []
     return None, []
 
 

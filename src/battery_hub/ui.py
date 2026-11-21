@@ -48,6 +48,7 @@ from .storage import (
     APP_ID,
     APP_MUTEX,
     APP_NAME,
+    DATA_DIR,
     append_history,
     estimate_drain_and_remaining,
     is_autostart_enabled,
@@ -57,7 +58,14 @@ from .storage import (
     save_settings,
     set_autostart,
 )
-from .tray_icon import DeviceBadgeState, accent_color_for, build_app_icon, build_combined_tray_icon
+from .tray_icon import (
+    DeviceBadgeState,
+    accent_color_for,
+    apply_windows_taskbar_icon,
+    build_app_icon,
+    build_combined_tray_icon,
+    write_app_ico,
+)
 
 INSTANCE_PORT = 47613
 ALERT_THRESHOLDS = (15, 5)
@@ -589,6 +597,7 @@ class HubDashboardWindow(QMainWindow):
         self._chart_filter: str = "both"
         self._kb_worker: Optional[KeyboardPollWorker] = None
 
+        self._ico_path = write_app_ico(DATA_DIR / "app_icon.ico")
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(build_app_icon())
         self.resize(980, 620)
@@ -954,8 +963,13 @@ class HubDashboardWindow(QMainWindow):
             else:
                 self.show_and_focus()
 
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        apply_windows_taskbar_icon(int(self.winId()), self._ico_path)
+
     def show_and_focus(self) -> None:
         self.showNormal()
+        apply_windows_taskbar_icon(int(self.winId()), self._ico_path)
         self.raise_()
         self.activateWindow()
 
@@ -1251,7 +1265,10 @@ def run_gui(entrypoint: Path, start_minimized: bool = False) -> int:
 
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
-    app.setWindowIcon(build_app_icon())
+    ico_path = write_app_ico(DATA_DIR / "app_icon.ico")
+    from PySide6.QtGui import QIcon
+
+    app.setWindowIcon(QIcon(str(ico_path)))
     app.setQuitOnLastWindowClosed(False)
 
     window = HubDashboardWindow(entrypoint)

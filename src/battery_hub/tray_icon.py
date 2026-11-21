@@ -15,9 +15,12 @@ Color thresholds per bar:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
+from pathlib import Path
+import struct
 from typing import Optional
 
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QBuffer, QIODevice, QRectF, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
 
 from .models import DeviceStatus
@@ -188,3 +191,72 @@ def build_app_icon() -> QIcon:
     for sz in (16, 20, 24, 32, 48, 64, 128, 256):
         icon.addPixmap(render_combined_pixmap(sz, kb_demo, mouse_demo))
     return icon
+
+
+def write_app_ico(ico_path: Path) -> Path:
+    """Write a standard multi-resolution PNG-backed Windows .ico file."""
+    kb_demo = DeviceBadgeState(percent=82, charging=False, status=DeviceStatus.CONNECTED)
+    mouse_demo = DeviceBadgeState(percent=30, charging=False, status=DeviceStatus.CONNECTED)
+    sizes = (16, 24, 32, 48, 64, 128, 256)
+    entries: list[tuple[int, bytes]] = []
+    for sz in sizes:
+        pm = render_combined_pixmap(sz, kb_demo, mouse_demo)
+        buf = QBuffer()
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        pm.save(buf, "PNG")
+        entries.append((sz, bytes(buf.data())))
+        buf.close()
+
+    header = struct.pack("<HHH", 0, 1, len(entries))
+    offset = 6 + 16 * len(entries)
+    directory = bytearray()
+    payload = bytearray()
+    for sz, png in entries:
+        dim = 0 if sz >= 256 else sz
+        directory.extend(struct.pack("<BBBBHHII", dim, dim, 0, 0, 1, 32, len(png), offset))
+        payload.extend(png)
+        offset += len(png)
+
+    ico_path.parent.mkdir(parents=True, exist_ok=True)
+    ico_path.write_bytes(header + bytes(directory) + bytes(payload))
+    return ico_path
+
+
+def apply_windows_taskbar_icon(hwnd: int, ico_path: Path) -> None:
+    """Explicitly set Win32 WM_SETICON (big & small) so Windows taskbar replaces the Python icon."""
+    if os.name != "nt" or not hwnd or not ico_path.exists():
+        return
+    try:
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        user32.LoadImageW.restype = ctypes.c_void_p
+        user32.LoadImageW.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_wchar_p,
+            ctypes.c_uint,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_uint,
+        ]
+        user32.SendMessageW.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_uint,
+            ctypes.c_size_t,
+            ctypes.c_void_p,
+        ]
+
+        IMAGE_ICON = 1
+        LR_LOADFROMFILE = 0x00000010
+        WM_SETICON = 0x0080
+        ICON_SMALL = 0
+        ICON_BIG = 1
+
+        h_big = user32.LoadImageW(None, str(ico_path), IMAGE_ICON, 48, 48, LR_LOADFROMFILE)
+        h_small = user32.LoadImageW(None, str(ico_path), IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
+        if h_big:
+            user32.SendMessageW(ctypes.c_void_p(hwnd), WM_SETICON, ICON_BIG, ctypes.c_void_p(h_big))
+        if h_small:
+            user32.SendMessageW(ctypes.c_void_p(hwnd), WM_SETICON, ICON_SMALL, ctypes.c_void_p(h_small))
+    except Exception:
+        pass

@@ -15,7 +15,7 @@ if str(SRC) not in sys.path:
 from battery_hub.keyboard_aula import (
     CMD_BATTERY,
     PACKET_LEN,
-    POWER_CHARGING,
+    POWER_CHARGING_STATES,
     POWER_DISCHARGING,
     REPORT_ID,
     build_battery_query,
@@ -23,7 +23,14 @@ from battery_hub.keyboard_aula import (
 )
 from battery_hub.i18n import tr
 from battery_hub.models import DeviceId, DeviceStatus, HistoryPoint
-from battery_hub.mouse_asx11 import BATTERY_SIG, parse_mouse_battery
+from battery_hub.mouse_asx11 import (
+    BATTERY_SIG,
+    PID_ADAPTER,
+    PID_WIRED,
+    VID_ASX11,
+    enumerate_mouse_mode,
+    parse_mouse_battery,
+)
 from battery_hub.storage import DEFAULT_SETTINGS, append_history, estimate_drain_and_remaining, load_history
 from battery_hub.tray_icon import (
     COLOR_CHARGING,
@@ -64,12 +71,13 @@ class KeyboardProtocolTests(unittest.TestCase):
         self.assertFalse(r.charging)
 
     def test_parse_charging(self) -> None:
-        r = parse_battery_response(self._frame(1, 65, POWER_CHARGING), now=1000.0)
-        self.assertIsNotNone(r)
-        assert r is not None
-        self.assertEqual(r.status, DeviceStatus.CHARGING)
-        self.assertEqual(r.percent, 65)
-        self.assertTrue(r.charging)
+        for power_byte in POWER_CHARGING_STATES:
+            r = parse_battery_response(self._frame(1, 65, power_byte), now=1000.0)
+            self.assertIsNotNone(r)
+            assert r is not None
+            self.assertEqual(r.status, DeviceStatus.CHARGING)
+            self.assertEqual(r.percent, 65)
+            self.assertTrue(r.charging)
 
     def test_parse_sleeping(self) -> None:
         r = parse_battery_response(self._frame(0, 0, POWER_DISCHARGING), now=1000.0)
@@ -95,6 +103,19 @@ class MouseProtocolTests(unittest.TestCase):
     def test_parse_out_of_range(self) -> None:
         report = list(BATTERY_SIG) + [150]
         self.assertIsNone(parse_mouse_battery(report))
+
+    def test_wired_takes_priority_over_adapter(self) -> None:
+        class FakeHid:
+            def enumerate(self, vid, pid):
+                if vid == VID_ASX11 and pid == PID_WIRED:
+                    return [{"path": b"wired"}]
+                if vid == VID_ASX11 and pid == PID_ADAPTER:
+                    return [{"path": b"adapter"}]
+                return []
+
+        mode, paths = enumerate_mouse_mode(FakeHid())
+        self.assertEqual(mode, "charging")
+        self.assertEqual(paths, [])
 
 
 class StorageTests(unittest.TestCase):
