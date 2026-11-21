@@ -217,8 +217,7 @@ class BatteryGaugeWidget(QWidget):
         self._charging: Optional[bool] = None
         self._status: DeviceStatus = DeviceStatus.WAITING
         self._subtitle: str = ""
-        self.setMinimumSize(176, 176)
-        self.setMaximumSize(190, 190)
+        self.setFixedSize(180, 180)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
     def set_state(
@@ -305,6 +304,8 @@ class DeviceCardWidget(QFrame):
     def __init__(self, title: str, subtitle: str, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setProperty("class", "card")
+        self.setMinimumSize(430, 268)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 16, 18, 16)
@@ -602,8 +603,8 @@ class HubDashboardWindow(QMainWindow):
         self.setWindowIcon(build_app_icon())
         # Apply Windows 11 PropertyStore + Class icon BEFORE first show
         apply_windows_taskbar_icon(int(self.winId()), self._ico_path)
-        self.resize(980, 620)
-        self.setMinimumSize(860, 540)
+        self.resize(1000, 640)
+        self.setMinimumSize(940, 600)
 
         self._apply_stylesheet()
         self._build_ui()
