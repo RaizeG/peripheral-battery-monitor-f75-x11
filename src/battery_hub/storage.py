@@ -179,49 +179,74 @@ def estimate_drain_and_remaining(
     return rate, remaining_hours
 
 
-def _autostart_command(entrypoint: Path) -> str:
-    py_exe = Path(sys.executable)
-    pythonw = py_exe.with_name("pythonw.exe")
-    launcher = pythonw if pythonw.exists() else py_exe
-    return f'"{launcher}" "{entrypoint}" --minimized'
+def _startup_shortcut_path() -> Path:
+    appdata = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
+    return appdata / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / f"{APP_NAME}.lnk"
+
+
+def _remove_legacy_registry_autostart() -> None:
+    if os.name != "nt":
+        return
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
+            try:
+                winreg.DeleteValue(key, RUN_NAME)
+            except FileNotFoundError:
+                pass
+    except Exception:
+        pass
 
 
 def is_autostart_enabled() -> bool:
     if os.name != "nt":
         return False
-    try:
-        import winreg
-
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_READ) as key:
-            winreg.QueryValueEx(key, RUN_NAME)
-            return True
-    except (FileNotFoundError, OSError):
-        return False
-    except Exception:
-        return False
+    return _startup_shortcut_path().exists()
 
 
 def set_autostart(enabled: bool, entrypoint: Path) -> bool:
     if os.name != "nt":
         return False
     try:
-        import winreg
+        import subprocess
 
-        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
-            if enabled:
-                winreg.SetValueEx(
-                    key,
-                    RUN_NAME,
-                    0,
-                    winreg.REG_SZ,
-                    _autostart_command(entrypoint),
-                )
-            else:
-                try:
-                    winreg.DeleteValue(key, RUN_NAME)
-                except FileNotFoundError:
-                    pass
-        return True
+        _remove_legacy_registry_autostart()
+        lnk = _startup_shortcut_path()
+        if not enabled:
+            try:
+                lnk.unlink()
+            except FileNotFoundError:
+                pass
+            return True
+
+        py_exe = Path(sys.executable)
+        pythonw = py_exe.with_name("pythonw.exe")
+        launcher = pythonw if pythonw.exists() else py_exe
+        ico_path = DATA_DIR / "app_icon.ico"
+
+        def _ps_quote(value: str) -> str:
+            return "'" + value.replace("'", "''") + "'"
+
+        args_str = f'"{entrypoint}" --minimized'
+        lines = [
+            "$ws = New-Object -ComObject WScript.Shell",
+            f"$s = $ws.CreateShortcut({_ps_quote(str(lnk))})",
+            f"$s.TargetPath = {_ps_quote(str(launcher))}",
+            f"$s.Arguments = {_ps_quote(args_str)}",
+            f"$s.WorkingDirectory = {_ps_quote(str(entrypoint.parent))}",
+            f"$s.Description = {_ps_quote(APP_NAME)}",
+        ]
+        if ico_path.exists():
+            lines.append(f"$s.IconLocation = {_ps_quote(f'{ico_path},0')}")
+        lines.append("$s.Save()")
+
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", "; ".join(lines)],
+            check=False,
+            creationflags=0x08000000,
+        )
+        return result.returncode == 0 and lnk.exists()
     except Exception as exc:
         log_error(f"Autostart update failed: {exc}")
         return False
