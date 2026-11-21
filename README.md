@@ -34,6 +34,15 @@ python -m venv .venv
   .\.venv\Scripts\python.exe peripheral_battery.py --minimized
   ```
 
+## Build standalone `.exe`
+
+```powershell
+.\.venv\Scripts\pip.exe install pyinstaller
+.\.venv\Scripts\python.exe build_exe.py
+```
+
+The single-file executable will be created at `dist\PeripheralBatteryHub.exe` (no Python installation required to run).
+
 ## Tests
 
 ```powershell

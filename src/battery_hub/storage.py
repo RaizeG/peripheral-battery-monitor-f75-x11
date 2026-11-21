@@ -220,21 +220,28 @@ def set_autostart(enabled: bool, entrypoint: Path) -> bool:
                 pass
             return True
 
-        py_exe = Path(sys.executable)
-        pythonw = py_exe.with_name("pythonw.exe")
-        launcher = pythonw if pythonw.exists() else py_exe
+        if getattr(sys, "frozen", False):
+            launcher = Path(sys.executable)
+            args_str = "--minimized"
+            work_dir = launcher.parent
+        else:
+            py_exe = Path(sys.executable)
+            pythonw = py_exe.with_name("pythonw.exe")
+            launcher = pythonw if pythonw.exists() else py_exe
+            args_str = f'"{entrypoint}" --minimized'
+            work_dir = entrypoint.parent
+
         ico_path = DATA_DIR / "app_icon.ico"
 
         def _ps_quote(value: str) -> str:
             return "'" + value.replace("'", "''") + "'"
 
-        args_str = f'"{entrypoint}" --minimized'
         lines = [
             "$ws = New-Object -ComObject WScript.Shell",
             f"$s = $ws.CreateShortcut({_ps_quote(str(lnk))})",
             f"$s.TargetPath = {_ps_quote(str(launcher))}",
             f"$s.Arguments = {_ps_quote(args_str)}",
-            f"$s.WorkingDirectory = {_ps_quote(str(entrypoint.parent))}",
+            f"$s.WorkingDirectory = {_ps_quote(str(work_dir))}",
             f"$s.Description = {_ps_quote(APP_NAME)}",
         ]
         if ico_path.exists():
