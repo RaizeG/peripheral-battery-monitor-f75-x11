@@ -966,6 +966,13 @@ class HubDashboardWindow(QMainWindow):
     def showEvent(self, event) -> None:
         super().showEvent(event)
         apply_windows_taskbar_icon(int(self.winId()), self._ico_path)
+        if hasattr(self, "_poll_timer"):
+            self._apply_poll_interval()
+
+    def hideEvent(self, event) -> None:
+        super().hideEvent(event)
+        if hasattr(self, "_poll_timer"):
+            self._apply_poll_interval()
 
     def show_and_focus(self) -> None:
         self.showNormal()
@@ -991,8 +998,15 @@ class HubDashboardWindow(QMainWindow):
         QApplication.quit()
 
     def _apply_poll_interval(self) -> None:
-        secs = max(10, int(self._settings.get("poll_interval_sec", 30)))
-        self._poll_timer.start(secs * 1000)
+        base_secs = max(10, int(self._settings.get("poll_interval_sec", 30)))
+        fast_mode = (
+            self._last_status.get(DeviceId.KEYBOARD) == DeviceStatus.CHARGING
+            or self.isVisible()
+        )
+        secs = min(base_secs, 5) if fast_mode else base_secs
+        interval_ms = secs * 1000
+        if not self._poll_timer.isActive() or self._poll_timer.interval() != interval_ms:
+            self._poll_timer.start(interval_ms)
 
     def _on_interval_changed(self, idx: int) -> None:
         secs = int(self._interval_combo.itemData(idx))
@@ -1046,6 +1060,7 @@ class HubDashboardWindow(QMainWindow):
     def _on_keyboard_poll_finished(self, reading: BatteryReading) -> None:
         self._refresh_btn.setEnabled(True)
         self._update_device_view(reading, initial=False)
+        self._apply_poll_interval()
 
     def _on_mouse_reading(self, reading: BatteryReading, _is_change: bool) -> None:
         self._update_device_view(reading, initial=False)
