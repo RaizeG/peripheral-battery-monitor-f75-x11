@@ -222,10 +222,88 @@ def write_app_ico(ico_path: Path) -> Path:
     return ico_path
 
 
-def apply_windows_taskbar_icon(hwnd: int, ico_path: Path) -> None:
-    """Explicitly set Win32 WM_SETICON (big & small) so Windows taskbar replaces the Python icon."""
+def _set_window_property_store(hwnd: int, app_id: str, ico_path: Path, display_name: str) -> None:
+    """Set PKEY_AppUserModel_ID and PKEY_AppUserModel_RelaunchIconResource on the HWND.
+
+    Required on Windows 11 when running under Microsoft Store (MSIX) Python so the
+    taskbar renders our .ico instead of the packaged pythonw.exe logo.
+    """
+    import ctypes
+    from ctypes import POINTER, Structure, byref, c_ubyte, c_uint, c_ulong, c_ulonglong, c_ushort, c_void_p, c_wchar_p
+
+    class GUID(Structure):
+        _fields_ = [
+            ("Data1", c_ulong),
+            ("Data2", c_ushort),
+            ("Data3", c_ushort),
+            ("Data4", c_ubyte * 8),
+        ]
+
+    class PROPERTYKEY(Structure):
+        _fields_ = [("fmtid", GUID), ("pid", c_ulong)]
+
+    class PROPVARIANT(Structure):
+        _fields_ = [
+            ("vt", c_ushort),
+            ("wReserved1", c_ushort),
+            ("wReserved2", c_ushort),
+            ("wReserved3", c_ushort),
+            ("pwszVal", c_wchar_p),
+            ("pad", c_ulonglong),
+        ]
+
+    iid_prop_store = GUID(
+        0x886D8EEB, 0x8CF2, 0x4446, (c_ubyte * 8)(0x8D, 0x02, 0xCD, 0xBA, 0x1D, 0xBD, 0xCF, 0x99)
+    )
+    fmtid_aumid = GUID(
+        0x9F4C2855, 0x9F79, 0x4B39, (c_ubyte * 8)(0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3)
+    )
+
+    shell32 = ctypes.windll.shell32
+    shell32.SHGetPropertyStoreForWindow.argtypes = [c_void_p, POINTER(GUID), POINTER(c_void_p)]
+    shell32.SHGetPropertyStoreForWindow.restype = ctypes.c_long
+
+    store_ptr = c_void_p()
+    hr = shell32.SHGetPropertyStoreForWindow(c_void_p(hwnd), byref(iid_prop_store), byref(store_ptr))
+    if hr != 0 or not store_ptr.value:
+        return
+
+    vtable = ctypes.cast(ctypes.cast(store_ptr, POINTER(c_void_p)).contents, POINTER(c_void_p))
+    release_fn = ctypes.WINFUNCTYPE(c_ulong, c_void_p)(vtable[2])
+    set_value_fn = ctypes.WINFUNCTYPE(
+        ctypes.c_long, c_void_p, POINTER(PROPERTYKEY), POINTER(PROPVARIANT)
+    )(vtable[6])
+    commit_fn = ctypes.WINFUNCTYPE(ctypes.c_long, c_void_p)(vtable[7])
+
+    VT_LPWSTR = 31
+    try:
+        props = (
+            (5, app_id),                      # PKEY_AppUserModel_ID
+            (3, f"{ico_path},0"),             # PKEY_AppUserModel_RelaunchIconResource
+            (4, display_name),                # PKEY_AppUserModel_RelaunchDisplayNameResource
+        )
+        for pid, val in props:
+            pkey = PROPERTYKEY(fmtid_aumid, pid)
+            pv = PROPVARIANT(VT_LPWSTR, 0, 0, 0, val, 0)
+            set_value_fn(store_ptr, byref(pkey), byref(pv))
+        commit_fn(store_ptr)
+    finally:
+        release_fn(store_ptr)
+
+
+def apply_windows_taskbar_icon(
+    hwnd: int,
+    ico_path: Path,
+    app_id: str = "PeripheralBatteryHub.Monitor",
+    display_name: str = "Peripheral Battery Hub",
+) -> None:
+    """Explicitly set Win32 taskbar icon via PropertyStore, Class icon, and WM_SETICON."""
     if os.name != "nt" or not hwnd or not ico_path.exists():
         return
+    try:
+        _set_window_property_store(hwnd, app_id, ico_path, display_name)
+    except Exception:
+        pass
     try:
         import ctypes
 
@@ -251,12 +329,21 @@ def apply_windows_taskbar_icon(hwnd: int, ico_path: Path) -> None:
         WM_SETICON = 0x0080
         ICON_SMALL = 0
         ICON_BIG = 1
+        GCLP_HICON = -14
+        GCLP_HICONSM = -34
 
         h_big = user32.LoadImageW(None, str(ico_path), IMAGE_ICON, 48, 48, LR_LOADFROMFILE)
         h_small = user32.LoadImageW(None, str(ico_path), IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
+
+        set_class = getattr(user32, "SetClassLongPtrW", user32.SetClassLongW)
+        set_class.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
+        set_class.restype = ctypes.c_void_p
+
         if h_big:
+            set_class(ctypes.c_void_p(hwnd), GCLP_HICON, ctypes.c_void_p(h_big))
             user32.SendMessageW(ctypes.c_void_p(hwnd), WM_SETICON, ICON_BIG, ctypes.c_void_p(h_big))
         if h_small:
+            set_class(ctypes.c_void_p(hwnd), GCLP_HICONSM, ctypes.c_void_p(h_small))
             user32.SendMessageW(ctypes.c_void_p(hwnd), WM_SETICON, ICON_SMALL, ctypes.c_void_p(h_small))
     except Exception:
         pass

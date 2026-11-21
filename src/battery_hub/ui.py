@@ -600,6 +600,8 @@ class HubDashboardWindow(QMainWindow):
         self._ico_path = write_app_ico(DATA_DIR / "app_icon.ico")
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(build_app_icon())
+        # Apply Windows 11 PropertyStore + Class icon BEFORE first show
+        apply_windows_taskbar_icon(int(self.winId()), self._ico_path)
         self.resize(980, 620)
         self.setMinimumSize(860, 540)
 
