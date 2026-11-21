@@ -277,15 +277,11 @@ def _set_window_property_store(hwnd: int, app_id: str, ico_path: Path, display_n
 
     VT_LPWSTR = 31
     try:
-        props = (
-            (5, app_id),                      # PKEY_AppUserModel_ID
-            (3, f"{ico_path},0"),             # PKEY_AppUserModel_RelaunchIconResource
-            (4, display_name),                # PKEY_AppUserModel_RelaunchDisplayNameResource
-        )
-        for pid, val in props:
-            pkey = PROPERTYKEY(fmtid_aumid, pid)
-            pv = PROPVARIANT(VT_LPWSTR, 0, 0, 0, val, 0)
-            set_value_fn(store_ptr, byref(pkey), byref(pv))
+        # Setting PKEY_AppUserModel_ID detaches the window from the MSIX Python
+        # taskbar icon so Explorer renders the window's own WM_SETICON directly.
+        pkey = PROPERTYKEY(fmtid_aumid, 5)  # PKEY_AppUserModel_ID
+        pv = PROPVARIANT(VT_LPWSTR, 0, 0, 0, app_id, 0)
+        set_value_fn(store_ptr, byref(pkey), byref(pv))
         commit_fn(store_ptr)
     finally:
         release_fn(store_ptr)
