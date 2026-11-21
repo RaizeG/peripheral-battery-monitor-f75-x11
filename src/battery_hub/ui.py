@@ -57,7 +57,7 @@ from .storage import (
     save_settings,
     set_autostart,
 )
-from .tray_icon import DeviceBadgeState, accent_color_for, build_combined_tray_icon
+from .tray_icon import DeviceBadgeState, accent_color_for, build_app_icon, build_combined_tray_icon
 
 INSTANCE_PORT = 47613
 ALERT_THRESHOLDS = (15, 5)
@@ -590,6 +590,7 @@ class HubDashboardWindow(QMainWindow):
         self._kb_worker: Optional[KeyboardPollWorker] = None
 
         self.setWindowTitle(APP_NAME)
+        self.setWindowIcon(build_app_icon())
         self.resize(980, 620)
         self.setMinimumSize(860, 540)
 
@@ -1175,7 +1176,6 @@ class HubDashboardWindow(QMainWindow):
         self._tray.setIcon(icon)
         if not self._tray.isVisible():
             self._tray.show()
-        self.setWindowIcon(icon)
 
         kb_line = self._tray_lines[DeviceId.KEYBOARD]
         mouse_line = self._tray_lines[DeviceId.MOUSE]
@@ -1251,6 +1251,7 @@ def run_gui(entrypoint: Path, start_minimized: bool = False) -> int:
 
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
+    app.setWindowIcon(build_app_icon())
     app.setQuitOnLastWindowClosed(False)
 
     window = HubDashboardWindow(entrypoint)

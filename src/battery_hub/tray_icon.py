@@ -178,3 +178,13 @@ def build_combined_tray_icon(
     for sz in (16, 20, 24, 32, 48, 64):
         icon.addPixmap(render_combined_pixmap(sz, kb, mouse))
     return icon
+
+
+def build_app_icon() -> QIcon:
+    """Create the static taskbar / window app icon (left bar green, right bar yellow)."""
+    kb_demo = DeviceBadgeState(percent=82, charging=False, status=DeviceStatus.CONNECTED)
+    mouse_demo = DeviceBadgeState(percent=30, charging=False, status=DeviceStatus.CONNECTED)
+    icon = QIcon()
+    for sz in (16, 20, 24, 32, 48, 64, 128, 256):
+        icon.addPixmap(render_combined_pixmap(sz, kb_demo, mouse_demo))
+    return icon
